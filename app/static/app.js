@@ -4,11 +4,15 @@ const feedList = document.querySelector("#feed-list");
 const episodeList = document.querySelector("#episode-list");
 const feedForm = document.querySelector("#feed-form");
 const toast = document.querySelector("#toast");
-const refreshAllBtn = document.querySelector("#refresh-feeds");
 const filterSelect = document.querySelector("#episode-filter");
 const heroCount = document.querySelector("#hero-feed-count");
+const topbarFeedCount = document.querySelector("#topbar-feed-count");
+const topbarEpisodeCount = document.querySelector("#topbar-episode-count");
+const sidebarFeedCount = document.querySelector("#sidebar-feed-count");
+const sidebarEpisodeCount = document.querySelector("#sidebar-episode-count");
 const addPanel = document.querySelector("#add-panel");
-const openAddPanelBtn = document.querySelector("#open-add-panel");
+const addPanelTriggers = document.querySelectorAll("[data-action='open-add-panel']");
+const refreshAllButtons = document.querySelectorAll("[data-action='refresh-feeds']");
 const closeAddPanelBtn = document.querySelector("#close-add-panel");
 const themeToggleBtn = document.querySelector("#toggle-theme");
 
@@ -70,7 +74,10 @@ const request = async (path, options = {}) => {
 
 const renderFeeds = (feeds) => {
     feedList.innerHTML = "";
-    heroCount.textContent = feeds.length.toString().padStart(2, "0");
+    const formattedCount = feeds.length.toString().padStart(2, "0");
+    heroCount.textContent = formattedCount;
+    if (topbarFeedCount) topbarFeedCount.textContent = formattedCount;
+    if (sidebarFeedCount) sidebarFeedCount.textContent = formattedCount;
 
     filterSelect.innerHTML = `<option value="">全部订阅</option>`;
     currentFeeds = feeds;
@@ -135,6 +142,10 @@ const renderFeeds = (feeds) => {
 
 const renderEpisodes = (episodes) => {
     episodeList.innerHTML = "";
+    const formattedCount = episodes.length.toString().padStart(2, "0");
+    if (topbarEpisodeCount) topbarEpisodeCount.textContent = formattedCount;
+    if (sidebarEpisodeCount) sidebarEpisodeCount.textContent = formattedCount;
+
     if (!episodes.length) {
         episodeList.innerHTML = '<p class="empty">暂无节目内容。</p>';
         return;
@@ -147,9 +158,11 @@ const renderEpisodes = (episodes) => {
             episode.title || "未命名节目";
         clone.querySelector(".card-desc").textContent =
             episode.summary || episode.description || "暂无简介";
-        clone.querySelector(".card-meta").textContent = new Date(
-            episode.published_at || episode.created_at || Date.now()
-        ).toLocaleString();
+        const publishedDate = episode.published
+            ? new Date(episode.published)
+            : new Date();
+        clone.querySelector(".card-meta").textContent =
+            publishedDate.toLocaleString();
         const link = clone.querySelector("a");
         link.href = episode.link || "#";
         link.textContent = "立即播放";
@@ -201,13 +214,19 @@ feedForm.addEventListener("submit", async (event) => {
     }
 });
 
-refreshAllBtn.addEventListener("click", async () => {
-    refreshAllBtn.disabled = true;
+const setRefreshButtonsDisabled = (disabled) => {
+    refreshAllButtons.forEach((btn) => {
+        btn.disabled = disabled;
+    });
+};
+
+const handleRefreshAll = async () => {
+    if (!refreshAllButtons.length) return;
     if (!currentFeeds.length) {
         showToast("暂无订阅");
-        refreshAllBtn.disabled = false;
         return;
     }
+    setRefreshButtonsDisabled(true);
     try {
         await Promise.all(
             currentFeeds.map((feed) =>
@@ -219,14 +238,20 @@ refreshAllBtn.addEventListener("click", async () => {
     } catch (error) {
         showToast(error.message, "danger");
     } finally {
-        refreshAllBtn.disabled = false;
+        setRefreshButtonsDisabled(false);
     }
+};
+
+refreshAllButtons.forEach((btn) => {
+    btn.addEventListener("click", handleRefreshAll);
 });
 
 filterSelect.addEventListener("change", loadEpisodes);
 
-openAddPanelBtn.addEventListener("click", () => {
-    addPanel.classList.add("open");
+addPanelTriggers.forEach((btn) => {
+    btn.addEventListener("click", () => {
+        addPanel.classList.add("open");
+    });
 });
 
 closeAddPanelBtn.addEventListener("click", () => {

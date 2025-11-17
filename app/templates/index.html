@@ -22,19 +22,34 @@
     <body>
         <div class="orb orb-one"></div>
         <div class="orb orb-two"></div>
-        <header class="hero">
-            <div class="hero-content">
-                <p class="eyebrow">智能订阅 · 实时跟进</p>
-                <h1>打造你的播客与资讯指挥舱</h1>
-                <p>
-                    收集、整理并刷新你喜爱的 RSS / Podcast 频道，
-                    通过流畅动画与轻盈交互掌控每一条更新。
-                </p>
-                <div class="hero-actions">
-                    <button class="btn primary" id="open-add-panel">订阅新源</button>
-                    <a class="btn ghost" href="/docs" target="_blank" rel="noreferrer">
-                        查看 API
-                    </a>
+        <div class="app-shell">
+            <header class="topbar">
+                <div class="brand">
+                    <span class="brand-mark" aria-hidden="true"></span>
+                    <div>
+                        <p class="brand-eyebrow">RSS & Podcast</p>
+                        <strong>Studio 控制台</strong>
+                    </div>
+                </div>
+                <div class="topbar-search" role="search">
+                    <label class="sr-only" for="global-search">搜索订阅或节目</label>
+                    <input
+                        id="global-search"
+                        type="search"
+                        name="q"
+                        placeholder="搜索订阅或节目..."
+                        autocomplete="off"
+                    />
+                </div>
+                <div class="topbar-actions">
+                    <div class="topbar-stats">
+                        <span>订阅</span>
+                        <strong id="topbar-feed-count">--</strong>
+                    </div>
+                    <div class="topbar-stats">
+                        <span>节目</span>
+                        <strong id="topbar-episode-count">--</strong>
+                    </div>
                     <button
                         class="btn ghost theme-toggle"
                         id="toggle-theme"
@@ -44,19 +59,76 @@
                         暗黑模式
                     </button>
                 </div>
-            </div>
-            <div class="hero-card" aria-hidden="true">
-                <div class="pulse"></div>
-                <div class="hero-card__content">
-                    <p>实时订阅</p>
-                    <h2 id="hero-feed-count">--</h2>
-                    <span>Feeds</span>
-                </div>
-            </div>
-        </header>
+            </header>
 
-        <main class="dashboard">
-            <section class="panel panel-form" id="add-panel">
+            <div class="app-layout">
+                <aside class="sidebar">
+                    <section class="sidebar-section">
+                        <h4>快速操作</h4>
+                        <button class="sidebar-cta" data-action="open-add-panel">
+                            订阅新源
+                        </button>
+                        <button class="sidebar-cta ghost" data-action="refresh-feeds">
+                            刷新全部
+                        </button>
+                    </section>
+                    <section class="sidebar-section sidebar-summary">
+                        <h4>指挥舱数据</h4>
+                        <div class="sidebar-metric">
+                            <span>活跃订阅</span>
+                            <strong id="sidebar-feed-count">--</strong>
+                        </div>
+                        <div class="sidebar-metric">
+                            <span>最新节目</span>
+                            <strong id="sidebar-episode-count">--</strong>
+                        </div>
+                    </section>
+                    <section class="sidebar-section">
+                        <h4>导航</h4>
+                        <a class="sidebar-link" href="#add-panel">订阅表单</a>
+                        <a class="sidebar-link" href="#feeds-panel">我的订阅</a>
+                        <a class="sidebar-link" href="#episodes-panel">最新节目</a>
+                        <a class="sidebar-link" href="/docs" target="_blank" rel="noreferrer">
+                            API 文档
+                        </a>
+                    </section>
+                </aside>
+
+                <main class="content">
+                    <header class="hero">
+                        <div class="hero-content">
+                            <p class="eyebrow">智能订阅 · 实时跟进</p>
+                            <h1>打造你的播客与资讯指挥舱</h1>
+                            <p>
+                                收集、整理并刷新你喜爱的 RSS / Podcast 频道，
+                                通过流畅动画与轻盈交互掌控每一条更新。
+                            </p>
+                            <div class="hero-actions">
+                                <button class="btn primary" data-action="open-add-panel">
+                                    订阅新源
+                                </button>
+                                <a
+                                    class="btn ghost"
+                                    href="/docs"
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    查看 API
+                                </a>
+                            </div>
+                        </div>
+                        <div class="hero-card" aria-hidden="true">
+                            <div class="pulse"></div>
+                            <div class="hero-card__content">
+                                <p>实时订阅</p>
+                                <h2 id="hero-feed-count">--</h2>
+                                <span>Feeds</span>
+                            </div>
+                        </div>
+                    </header>
+
+                    <section class="dashboard">
+                        <section class="panel panel-form" id="add-panel">
                 <div class="panel-header">
                     <h3>订阅新源</h3>
                     <button id="close-add-panel" aria-label="关闭表单">&times;</button>
@@ -77,30 +149,35 @@
                     </label>
                     <button class="btn primary" type="submit">立即订阅</button>
                 </form>
-            </section>
+                        </section>
 
-            <section class="panel">
-                <div class="panel-header">
-                    <h3>我的订阅</h3>
-                    <div class="panel-actions">
-                        <button class="btn ghost" id="refresh-feeds">刷新全部</button>
-                    </div>
-                </div>
-                <div class="list" id="feed-list" aria-live="polite"></div>
-            </section>
+                        <section class="panel" id="feeds-panel">
+                            <div class="panel-header">
+                                <h3>我的订阅</h3>
+                                <div class="panel-actions">
+                                    <button class="btn ghost" id="refresh-feeds" data-action="refresh-feeds">
+                                        刷新全部
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="list" id="feed-list" aria-live="polite"></div>
+                        </section>
 
-            <section class="panel">
-                <div class="panel-header">
-                    <h3>最新节目</h3>
-                    <div class="panel-actions">
-                        <select id="episode-filter">
-                            <option value="">全部订阅</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="list" id="episode-list"></div>
-            </section>
-        </main>
+                        <section class="panel" id="episodes-panel">
+                            <div class="panel-header">
+                                <h3>最新节目</h3>
+                                <div class="panel-actions">
+                                    <select id="episode-filter">
+                                        <option value="">全部订阅</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="list" id="episode-list"></div>
+                        </section>
+                    </section>
+                </main>
+            </div>
+        </div>
 
         <template id="feed-card-template">
             <article class="card">
