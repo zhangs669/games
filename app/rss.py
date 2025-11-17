@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any, Iterable
 
 import feedparser
+import html2text
 import httpx
 
 from app.config import get_settings
@@ -15,6 +16,22 @@ settings = get_settings()
 
 class FeedFetchError(RuntimeError):
     """网络或解析错误。"""
+
+
+_markdown_converter = html2text.HTML2Text()
+_markdown_converter.body_width = 0
+_markdown_converter.ignore_links = False
+_markdown_converter.ignore_images = True
+_markdown_converter.ignore_emphasis = False
+_markdown_converter.single_line_break = True
+
+
+def _html_to_markdown(value: str | None) -> str | None:
+    if not value:
+        return value
+    markdown = _markdown_converter.handle(value)
+    cleaned = markdown.strip()
+    return cleaned or None
 
 
 def _to_datetime(struct_time: Any | None) -> datetime | None:
@@ -69,12 +86,13 @@ async def fetch_feed(
 
     entries = []
     for entry in parsed.entries:
+        summary = _html_to_markdown(entry.get("summary"))
         entries.append(
             {
                 "guid": entry.get("id") or entry.get("guid") or entry.get("link"),
                 "title": entry.get("title"),
                 "link": entry.get("link"),
-                "summary": entry.get("summary"),
+                "summary": summary,
                 "published": _to_datetime(entry.get("published_parsed")),
                 "audio_url": _extract_audio(entry),
                 "duration": entry.get("itunes_duration"),
@@ -88,7 +106,9 @@ async def fetch_feed(
         "modified": response.headers.get("Last-Modified"),
         "feed": {
             "title": feed_meta.get("title"),
-            "description": feed_meta.get("subtitle") or feed_meta.get("description"),
+            "description": _html_to_markdown(
+                feed_meta.get("subtitle") or feed_meta.get("description")
+            ),
             "link": feed_meta.get("link"),
             "language": feed_meta.get("language"),
             "published": _to_datetime(feed_meta.get("published_parsed")),

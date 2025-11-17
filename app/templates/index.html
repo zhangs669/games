@@ -151,28 +151,58 @@
                 </form>
                         </section>
 
-                        <section class="panel" id="feeds-panel">
-                            <div class="panel-header">
-                                <h3>我的订阅</h3>
+                        <section class="panel dashboard-panel" id="dashboard-panel">
+                            <div class="panel-header dashboard-panel__header">
+                                <div>
+                                    <p class="eyebrow">实时仪表盘</p>
+                                    <h3>我的指挥舱</h3>
+                                </div>
+                                <div class="tabs" role="tablist" aria-label="仪表盘视图切换">
+                                    <button
+                                        class="tab active"
+                                        role="tab"
+                                        aria-selected="true"
+                                        data-tab-target="feeds"
+                                    >
+                                        我的订阅
+                                    </button>
+                                    <button
+                                        class="tab"
+                                        role="tab"
+                                        aria-selected="false"
+                                        data-tab-target="episodes"
+                                    >
+                                        最新节目
+                                    </button>
+                                </div>
+                            </div>
+                            <div
+                                class="tab-content active"
+                                data-tab-content="feeds"
+                                role="tabpanel"
+                                aria-label="我的订阅列表"
+                            >
                                 <div class="panel-actions">
                                     <button class="btn ghost" id="refresh-feeds" data-action="refresh-feeds">
                                         刷新全部
                                     </button>
                                 </div>
+                                <div class="list" id="feed-list" aria-live="polite"></div>
                             </div>
-                            <div class="list" id="feed-list" aria-live="polite"></div>
-                        </section>
-
-                        <section class="panel" id="episodes-panel">
-                            <div class="panel-header">
-                                <h3>最新节目</h3>
+                            <div
+                                class="tab-content"
+                                data-tab-content="episodes"
+                                role="tabpanel"
+                                aria-label="最新节目列表"
+                                hidden
+                            >
                                 <div class="panel-actions">
-                                    <select id="episode-filter">
+                                    <select id="episode-filter" aria-label="按订阅筛选节目">
                                         <option value="">全部订阅</option>
                                     </select>
                                 </div>
+                                <div class="list" id="episode-list"></div>
                             </div>
-                            <div class="list" id="episode-list"></div>
                         </section>
                     </section>
                 </main>
@@ -184,7 +214,7 @@
                 <div class="card-content">
                     <div>
                         <h4 class="card-title"></h4>
-                        <p class="card-desc"></p>
+                        <div class="card-desc"></div>
                     </div>
                     <small class="card-meta"></small>
                 </div>
@@ -204,16 +234,19 @@
                 <div class="card-content">
                     <div>
                         <h4 class="card-title"></h4>
-                        <p class="card-desc"></p>
+                        <small class="card-source"></small>
+                        <div class="card-desc"></div>
                     </div>
                     <small class="card-meta"></small>
                 </div>
-                <a class="btn ghost" target="_blank" rel="noreferrer">立即播放</a>
+                <a class="btn ghost" target="_blank" rel="noreferrer">打开原文</a>
             </article>
         </template>
 
         <div id="toast" role="status" aria-live="assertive"></div>
 
+        <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
         <script src="/static/app.js" type="module"></script>
     </body>
 </html>

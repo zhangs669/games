@@ -61,16 +61,21 @@ async def subscribe_feed(payload: schemas.FeedCreate, db=Depends(get_db)):
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     if payload.auto_refresh:
-        fetch_result = await rss.fetch_feed(feed.url)
+        try:
+            fetch_result = await rss.fetch_feed(feed.url)
+        except rss.FeedFetchError as exc:
+            crud.delete_feed(db, feed)
+            raise HTTPException(status_code=502, detail=str(exc)) from exc
         crud.refresh_feed(db, feed, fetch_result)
 
     db.refresh(feed)
-    return feed
+    detailed_feed = crud.get_feed_with_episodes(db, feed.id)
+    return detailed_feed or feed
 
 
 @app.get("/feeds/{feed_id}", response_model=schemas.FeedDetail, tags=["feeds"])
 def get_feed(feed_id: int, db=Depends(get_db)):
-    feed = crud.get_feed(db, feed_id)
+    feed = crud.get_feed_with_episodes(db, feed_id)
     if not feed:
         raise HTTPException(status_code=404, detail="订阅不存在")
     return feed

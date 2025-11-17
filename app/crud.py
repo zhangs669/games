@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from sqlalchemy import Select, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from app import models
 
@@ -24,12 +24,25 @@ def create_feed(db: Session, url: str) -> models.Feed:
 
 
 def list_feeds(db: Session) -> list[models.Feed]:
-    statement: Select[tuple[models.Feed]] = select(models.Feed).order_by(models.Feed.id.desc())
+    statement: Select[tuple[models.Feed]] = (
+        select(models.Feed)
+        .options(selectinload(models.Feed.episodes))
+        .order_by(models.Feed.id.desc())
+    )
     return list(db.scalars(statement))
 
 
 def get_feed(db: Session, feed_id: int) -> models.Feed | None:
     return db.get(models.Feed, feed_id)
+
+
+def get_feed_with_episodes(db: Session, feed_id: int) -> models.Feed | None:
+    statement: Select[tuple[models.Feed]] = (
+        select(models.Feed)
+        .options(selectinload(models.Feed.episodes))
+        .where(models.Feed.id == feed_id)
+    )
+    return db.scalar(statement)
 
 
 def delete_feed(db: Session, feed: models.Feed) -> None:

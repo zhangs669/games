@@ -1,4 +1,25 @@
 const apiBase = "";
+const markedAvailable = typeof window !== "undefined" && window.marked;
+if (markedAvailable) {
+    window.marked.setOptions({
+        mangle: false,
+        headerIds: false,
+    });
+}
+const domPurifyAvailable = typeof window !== "undefined" && window.DOMPurify;
+const renderMarkdown = (element, markdown, fallback = "") => {
+    if (!element) return;
+    if (!markdown) {
+        element.textContent = fallback;
+        return;
+    }
+    if (markedAvailable && domPurifyAvailable) {
+        const html = window.marked.parse(markdown);
+        element.innerHTML = window.DOMPurify.sanitize(html);
+        return;
+    }
+    element.textContent = markdown;
+};
 let currentFeeds = [];
 const feedList = document.querySelector("#feed-list");
 const episodeList = document.querySelector("#episode-list");
@@ -15,8 +36,44 @@ const addPanelTriggers = document.querySelectorAll("[data-action='open-add-panel
 const refreshAllButtons = document.querySelectorAll("[data-action='refresh-feeds']");
 const closeAddPanelBtn = document.querySelector("#close-add-panel");
 const themeToggleBtn = document.querySelector("#toggle-theme");
+const dashboardTabs = document.querySelectorAll("[data-tab-target]");
+const tabContents = document.querySelectorAll("[data-tab-content]");
 
 const THEME_STORAGE_KEY = "rss_studio_theme";
+const COLLAPSE_CHAR_THRESHOLD = 180;
+
+const getFeedHomepage = (feedId) => {
+    if (!feedId) return null;
+    const feed = currentFeeds.find((item) => item.id === feedId);
+    return feed?.link || feed?.url || null;
+};
+
+const getFeedDisplayName = (feedId) => {
+    if (!feedId) return "未知来源";
+    const feed = currentFeeds.find((item) => item.id === feedId);
+    return feed?.title || feed?.url || "未知来源";
+};
+
+const attachDescriptionToggle = (card) => {
+    if (!card) return;
+    const desc = card.querySelector(".card-desc");
+    if (!desc) return;
+    const text = desc.textContent?.trim() ?? "";
+    if (text.length <= COLLAPSE_CHAR_THRESHOLD) return;
+
+    desc.classList.add("card-desc--collapsible");
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "card-toggle";
+    toggle.textContent = "展开";
+    toggle.setAttribute("aria-expanded", "false");
+    toggle.addEventListener("click", () => {
+        const expanded = desc.classList.toggle("card-desc--expanded");
+        toggle.textContent = expanded ? "收起" : "展开";
+        toggle.setAttribute("aria-expanded", String(expanded));
+    });
+    desc.insertAdjacentElement("afterend", toggle);
+};
 
 const applyTheme = (theme) => {
     const isDark = theme === "dark";
@@ -100,13 +157,17 @@ const renderFeeds = (feeds) => {
         const card = clone.querySelector(".card");
         card.dataset.feedId = feed.id;
         clone.querySelector(".card-title").textContent = feed.title || "未命名订阅";
-        clone.querySelector(".card-desc").textContent =
-            feed.description || feed.url;
+        renderMarkdown(
+            clone.querySelector(".card-desc"),
+            feed.description,
+            feed.url
+        );
         clone.querySelector(".card-meta").textContent = `最新更新：${
             feed.last_checked
                 ? new Date(feed.last_checked).toLocaleString()
                 : "未抓取"
         }`;
+        attachDescriptionToggle(card);
 
         const [refreshBtn, deleteBtn] = clone.querySelectorAll(".btn.icon");
         refreshBtn.addEventListener("click", async () => {
@@ -154,18 +215,28 @@ const renderEpisodes = (episodes) => {
     const template = document.querySelector("#episode-card-template");
     episodes.forEach((episode) => {
         const clone = template.content.cloneNode(true);
+        const card = clone.querySelector(".card");
         clone.querySelector(".card-title").textContent =
             episode.title || "未命名节目";
-        clone.querySelector(".card-desc").textContent =
-            episode.summary || episode.description || "暂无简介";
+        const source = card.querySelector(".card-source");
+        if (source) {
+            source.textContent = `来源：${getFeedDisplayName(episode.feed_id)}`;
+        }
+        renderMarkdown(
+            clone.querySelector(".card-desc"),
+            episode.summary || episode.description,
+            "暂无简介"
+        );
+        attachDescriptionToggle(card);
         const publishedDate = episode.published
             ? new Date(episode.published)
             : new Date();
         clone.querySelector(".card-meta").textContent =
             publishedDate.toLocaleString();
         const link = clone.querySelector("a");
-        link.href = episode.link || "#";
-        link.textContent = "立即播放";
+        link.href = episode.link || getFeedHomepage(episode.feed_id) || "#";
+        link.textContent = "打开原文";
+        link.title = "在新标签打开原网页";
         episodeList.appendChild(clone);
     });
 };
@@ -258,12 +329,41 @@ closeAddPanelBtn.addEventListener("click", () => {
     addPanel.classList.remove("open");
 });
 
+const activateDashboardTab = (target) => {
+    tabContents.forEach((content) => {
+        const isActive = content.dataset.tabContent === target;
+        content.classList.toggle("active", isActive);
+        if (isActive) {
+            content.removeAttribute("hidden");
+        } else {
+            content.setAttribute("hidden", "true");
+        }
+    });
+    dashboardTabs.forEach((tab) => {
+        const isActive = tab.dataset.tabTarget === target;
+        tab.classList.toggle("active", isActive);
+        tab.setAttribute("aria-selected", String(isActive));
+    });
+};
+
+const initDashboardTabs = () => {
+    if (!dashboardTabs.length) return;
+    dashboardTabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+            if (tab.classList.contains("active")) return;
+            activateDashboardTab(tab.dataset.tabTarget);
+        });
+    });
+    activateDashboardTab("feeds");
+};
+
 const init = async () => {
     await loadFeeds();
     await loadEpisodes();
 };
 
 initThemeControls();
+initDashboardTabs();
 init();
 
 

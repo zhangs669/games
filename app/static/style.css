@@ -311,6 +311,51 @@ h1 {
     gap: 2rem;
 }
 
+.dashboard-panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.tabs {
+    display: inline-flex;
+    padding: 0.3rem;
+    border-radius: 999px;
+    background: var(--card);
+    border: 1px solid var(--border);
+}
+
+.tab {
+    border: none;
+    border-radius: 999px;
+    padding: 0.5rem 1.4rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.tab.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #051021;
+    box-shadow: 0 8px 20px rgba(90, 125, 255, 0.25);
+    transform: translateY(-1px);
+}
+
+.tab-content {
+    display: none;
+    animation: fade-in 0.35s ease;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+
 .panel {
     background: var(--panel);
     border: 1px solid var(--border);
@@ -372,7 +417,7 @@ h1 {
     border-radius: 20px;
     padding: 1.2rem 1.4rem;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
     animation: fade-in 0.6s ease;
@@ -381,16 +426,81 @@ h1 {
 
 .card-content {
     flex: 1;
+    min-width: 0;
 }
 
 .card-title {
     margin: 0 0 0.3rem;
 }
 
+.card-source {
+    display: inline-block;
+    margin: 0 0 0.4rem;
+    color: var(--accent);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
 .card-desc {
     margin: 0;
     color: var(--muted);
     font-size: 0.95rem;
+    line-height: 1.5;
+    overflow-wrap: break-word;
+    word-break: break-word;
+}
+
+.card-desc img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+.card-desc pre,
+.card-desc code {
+    max-width: 100%;
+    overflow-x: auto;
+    display: block;
+}
+
+.card-desc--collapsible {
+    max-height: 4.8rem;
+    overflow: hidden;
+    position: relative;
+}
+
+.card-desc--collapsible::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 2rem;
+    background: linear-gradient(transparent, var(--panel));
+    pointer-events: none;
+}
+
+.card-desc--expanded {
+    max-height: none;
+}
+
+.card-desc--expanded::after {
+    display: none;
+}
+
+.card-toggle {
+    margin-top: 0.35rem;
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+    font-size: 0.9rem;
+}
+
+.card-toggle:hover {
+    text-decoration: underline;
 }
 
 .card-meta {
