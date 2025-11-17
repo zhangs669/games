@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>RSS & Podcast Studio</title>
+        <link rel="stylesheet" href="/static/style.css" />
+        <link
+            rel="preconnect"
+            href="https://fonts.googleapis.com"
+        />
+        <link
+            rel="preconnect"
+            href="https://fonts.gstatic.com"
+            crossorigin
+        />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+            rel="stylesheet"
+        />
+    </head>
+    <body>
+        <div class="orb orb-one"></div>
+        <div class="orb orb-two"></div>
+        <header class="hero">
+            <div class="hero-content">
+                <p class="eyebrow">智能订阅 · 实时跟进</p>
+                <h1>打造你的播客与资讯指挥舱</h1>
+                <p>
+                    收集、整理并刷新你喜爱的 RSS / Podcast 频道，
+                    通过流畅动画与轻盈交互掌控每一条更新。
+                </p>
+                <div class="hero-actions">
+                    <button class="btn primary" id="open-add-panel">订阅新源</button>
+                    <a class="btn ghost" href="/docs" target="_blank" rel="noreferrer">
+                        查看 API
+                    </a>
+                    <button
+                        class="btn ghost theme-toggle"
+                        id="toggle-theme"
+                        aria-pressed="false"
+                        aria-label="切换暗黑模式"
+                    >
+                        暗黑模式
+                    </button>
+                </div>
+            </div>
+            <div class="hero-card" aria-hidden="true">
+                <div class="pulse"></div>
+                <div class="hero-card__content">
+                    <p>实时订阅</p>
+                    <h2 id="hero-feed-count">--</h2>
+                    <span>Feeds</span>
+                </div>
+            </div>
+        </header>
+
+        <main class="dashboard">
+            <section class="panel panel-form" id="add-panel">
+                <div class="panel-header">
+                    <h3>订阅新源</h3>
+                    <button id="close-add-panel" aria-label="关闭表单">&times;</button>
+                </div>
+                <form id="feed-form">
+                    <label>
+                        订阅链接
+                        <input
+                            type="url"
+                            name="url"
+                            placeholder="https://example.com/feed.xml"
+                            required
+                        />
+                    </label>
+                    <label class="checkbox">
+                        <input type="checkbox" name="auto_refresh" checked />
+                        <span>创建后立即抓取最新内容</span>
+                    </label>
+                    <button class="btn primary" type="submit">立即订阅</button>
+                </form>
+            </section>
+
+            <section class="panel">
+                <div class="panel-header">
+                    <h3>我的订阅</h3>
+                    <div class="panel-actions">
+                        <button class="btn ghost" id="refresh-feeds">刷新全部</button>
+                    </div>
+                </div>
+                <div class="list" id="feed-list" aria-live="polite"></div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-header">
+                    <h3>最新节目</h3>
+                    <div class="panel-actions">
+                        <select id="episode-filter">
+                            <option value="">全部订阅</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="list" id="episode-list"></div>
+            </section>
+        </main>
+
+        <template id="feed-card-template">
+            <article class="card">
+                <div class="card-content">
+                    <div>
+                        <h4 class="card-title"></h4>
+                        <p class="card-desc"></p>
+                    </div>
+                    <small class="card-meta"></small>
+                </div>
+                <div class="card-actions">
+                    <button class="btn icon refresh" title="刷新订阅">
+                        <span>↻</span>
+                    </button>
+                    <button class="btn icon danger" title="删除订阅">
+                        <span>✕</span>
+                    </button>
+                </div>
+            </article>
+        </template>
+
+        <template id="episode-card-template">
+            <article class="card">
+                <div class="card-content">
+                    <div>
+                        <h4 class="card-title"></h4>
+                        <p class="card-desc"></p>
+                    </div>
+                    <small class="card-meta"></small>
+                </div>
+                <a class="btn ghost" target="_blank" rel="noreferrer">立即播放</a>
+            </article>
+        </template>
+
+        <div id="toast" role="status" aria-live="assertive"></div>
+
+        <script src="/static/app.js" type="module"></script>
+    </body>
+</html>
+
+

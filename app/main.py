@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
-from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi import Depends, FastAPI, HTTPException, Query, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 
 from app import crud, rss, schemas
 from app.config import get_settings
@@ -12,6 +15,8 @@ from app.models import Feed as FeedModel
 
 settings = get_settings()
 app = FastAPI(title="RSS & Podcast Subscription API", version="1.0.0")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+templates = Jinja2Templates(directory="app/templates")
 
 if settings.allow_origin:
     app.add_middleware(
@@ -33,6 +38,11 @@ def health_check() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def landing_page(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
+
+
 @app.get("/feeds", response_model=list[schemas.Feed], tags=["feeds"])
 def list_feeds(db=Depends(get_db)):
     return crud.list_feeds(db)
@@ -46,7 +56,7 @@ def list_feeds(db=Depends(get_db)):
 )
 async def subscribe_feed(payload: schemas.FeedCreate, db=Depends(get_db)):
     try:
-        feed = crud.create_feed(db, payload.url)
+        feed = crud.create_feed(db, str(payload.url))
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
