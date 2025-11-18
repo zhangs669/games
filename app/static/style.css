@@ -983,10 +983,11 @@ body.theme-dark .theme-toggle::before {
 
 .modal-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
     padding: 1.5rem 2rem;
     border-bottom: 1px solid var(--border);
+    gap: 1rem;
 }
 
 .modal-title {
@@ -1036,6 +1037,10 @@ body.theme-dark .theme-toggle::before {
     padding: 0;
 }
 
+#reader-modal .modal-body {
+    padding: 0;
+}
+
 .reader-content {
     max-width: 100%;
     width: 100%;
@@ -1045,14 +1050,19 @@ body.theme-dark .theme-toggle::before {
     margin: 0;
 }
 
-.reader-meta {
+.reader-header-content {
+    flex: 1;
+    padding-right: 1rem;
+}
+
+.reader-header-meta {
     display: flex;
     gap: 1rem;
-    margin-bottom: 1.5rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px solid var(--border);
-    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
     color: var(--muted);
+    flex-wrap: wrap;
+    align-items: center;
 }
 
 .reader-source {
@@ -1060,50 +1070,165 @@ body.theme-dark .theme-toggle::before {
     font-weight: 600;
 }
 
+.reader-reading-time {
+    color: var(--muted);
+}
+
+.reader-original-link {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: color 0.2s ease;
+}
+
+.reader-original-link:hover {
+    color: var(--accent);
+    text-decoration: underline;
+}
+
+/* 阅读器控制栏 */
+.reader-controls {
+    display: flex;
+    gap: 1.5rem;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--field-bg);
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.reader-control-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.reader-control-group label {
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-right: 0.25rem;
+}
+
+.reader-control-btn {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    min-width: 2.5rem;
+    text-align: center;
+}
+
+.reader-control-btn:hover {
+    background: var(--field-bg);
+    border-color: var(--accent);
+}
+
+.reader-control-btn.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+}
+
+.reader-control-value {
+    font-size: 0.85rem;
+    color: var(--text);
+    min-width: 3rem;
+    text-align: center;
+}
+
+/* 阅读器文章内容 */
 .reader-article {
     line-height: 1.8;
     color: var(--text);
     font-size: 1.05rem;
-    max-width: 900px;
     margin: 0 auto;
+    padding: 2rem;
+    transition: all 0.3s ease;
 }
 
+/* 行宽设置 */
+.reader-article.reader-width-narrow {
+    max-width: 600px;
+}
+
+.reader-article.reader-width-medium {
+    max-width: 700px;
+}
+
+.reader-article.reader-width-wide {
+    max-width: 900px;
+}
+
+/* 字体设置 */
+.reader-article.reader-font-serif {
+    font-family: "Georgia", "Times New Roman", "宋体", "SimSun", serif;
+}
+
+.reader-article.reader-font-sans {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* 章节标题优化 */
 .reader-article h1,
 .reader-article h2,
 .reader-article h3,
 .reader-article h4 {
-    margin-top: 2rem;
+    margin-top: 2.5rem;
     margin-bottom: 1rem;
     color: var(--text);
     font-weight: 700;
+    line-height: 1.4;
 }
 
 .reader-article h1 {
     font-size: 2rem;
+    margin-top: 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--border);
 }
 
 .reader-article h2 {
     font-size: 1.75rem;
+    margin-top: 2.5rem;
 }
 
 .reader-article h3 {
     font-size: 1.5rem;
+    margin-top: 2rem;
+}
+
+.reader-article h4 {
+    font-size: 1.25rem;
+    margin-top: 1.5rem;
 }
 
 .reader-article p {
     margin-bottom: 1.5rem;
+    text-align: justify;
 }
 
 .reader-article img {
     max-width: 100%;
     height: auto;
     border-radius: 12px;
-    margin: 1.5rem 0;
+    margin: 2rem 0;
+    display: block;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .reader-article a {
     color: var(--accent);
     text-decoration: underline;
+    transition: color 0.2s ease;
+}
+
+.reader-article a:hover {
+    color: var(--accent);
+    opacity: 0.8;
 }
 
 .reader-article code {
@@ -1111,14 +1236,21 @@ body.theme-dark .theme-toggle::before {
     padding: 0.2rem 0.4rem;
     border-radius: 4px;
     font-size: 0.9em;
+    font-family: "Consolas", "Monaco", "Courier New", monospace;
 }
 
 .reader-article pre {
     background: var(--field-bg);
-    padding: 1rem;
+    padding: 1.5rem;
     border-radius: 8px;
     overflow-x: auto;
     margin: 1.5rem 0;
+    border: 1px solid var(--border);
+}
+
+.reader-article pre code {
+    background: none;
+    padding: 0;
 }
 
 .reader-article blockquote {
@@ -1127,12 +1259,79 @@ body.theme-dark .theme-toggle::before {
     margin: 1.5rem 0;
     color: var(--muted);
     font-style: italic;
+    background: var(--field-bg);
+    padding: 1rem 1.5rem;
+    border-radius: 0 8px 8px 0;
 }
 
 .reader-loading {
     text-align: center;
     padding: 3rem;
     color: var(--muted);
+}
+
+/* 阅读器主题 */
+.reader-theme-light {
+    --reader-bg: #ffffff;
+    --reader-text: #1a1a1a;
+    --reader-muted: #666666;
+    --reader-border: #e0e0e0;
+}
+
+.reader-theme-light .reader-content {
+    background: var(--reader-bg);
+    color: var(--reader-text);
+}
+
+.reader-theme-light .reader-article {
+    color: var(--reader-text);
+}
+
+.reader-theme-light .reader-controls {
+    background: #f5f5f5;
+    border-bottom-color: var(--reader-border);
+}
+
+.reader-theme-dark {
+    --reader-bg: #1a1a1a;
+    --reader-text: #e0e0e0;
+    --reader-muted: #999999;
+    --reader-border: #333333;
+}
+
+.reader-theme-dark .reader-content {
+    background: var(--reader-bg);
+    color: var(--reader-text);
+}
+
+.reader-theme-dark .reader-article {
+    color: var(--reader-text);
+}
+
+.reader-theme-dark .reader-controls {
+    background: #252525;
+    border-bottom-color: var(--reader-border);
+}
+
+.reader-theme-sepia {
+    --reader-bg: #f4ecd8;
+    --reader-text: #3e3e3e;
+    --reader-muted: #6b6b6b;
+    --reader-border: #d4c4a8;
+}
+
+.reader-theme-sepia .reader-content {
+    background: var(--reader-bg);
+    color: var(--reader-text);
+}
+
+.reader-theme-sepia .reader-article {
+    color: var(--reader-text);
+}
+
+.reader-theme-sepia .reader-controls {
+    background: #ede5d3;
+    border-bottom-color: var(--reader-border);
 }
 
 /* 播放器样式 */

@@ -121,3 +121,24 @@ def list_episodes(
 ):
     return crud.list_episodes(db, feed_id, limit)
 
+
+@app.get("/episodes/{episode_id}/full-content", tags=["episodes"])
+async def get_episode_full_content(episode_id: int, db=Depends(get_db)):
+    """获取文章全文内容。"""
+    episode = crud.get_episode(db, episode_id)
+    if not episode:
+        raise HTTPException(status_code=404, detail="文章不存在")
+    
+    # 优先使用已存储的摘要（RSS feed中可能已包含完整内容）
+    if episode.summary and len(episode.summary) > 500:
+        return {"content": episode.summary, "source": "summary"}
+    
+    # 如果有链接，尝试从原文抓取
+    if episode.link:
+        full_content = await rss.fetch_full_content(episode.link)
+        if full_content:
+            return {"content": full_content, "source": "fetched"}
+    
+    # 回退到摘要
+    return {"content": episode.summary or "", "source": "summary"}
+

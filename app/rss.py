@@ -8,6 +8,7 @@ from typing import Any, Iterable
 import feedparser
 import html2text
 import httpx
+from readability.readability import Document as ReadabilityDocument
 
 from app.config import get_settings
 
@@ -115,4 +116,42 @@ async def fetch_feed(
         },
         "entries": entries,
     }
+
+
+async def fetch_full_content(url: str) -> str | None:
+    """从URL抓取并提取文章全文内容（Markdown格式）。"""
+    if not url:
+        return None
+    
+    headers = {
+        "User-Agent": settings.user_agent,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    }
+    
+    try:
+        async with httpx.AsyncClient(timeout=settings.feed_http_timeout) as client:
+            response = await client.get(url, headers=headers, follow_redirects=True)
+        
+        if response.status_code >= 400:
+            return None
+        
+        html_content = response.text
+        
+        # 使用 readability 提取正文
+        try:
+            doc = ReadabilityDocument(html_content)
+            article_html = doc.summary()
+            
+            # 转换为 Markdown
+            if article_html:
+                markdown = _html_to_markdown(article_html)
+                return markdown
+        except Exception:
+            # 如果 readability 失败，尝试直接转换整个HTML
+            pass
+        
+        # 回退：直接转换HTML为Markdown
+        return _html_to_markdown(html_content)
+    except Exception:
+        return None
 

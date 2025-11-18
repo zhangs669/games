@@ -122,3 +122,7 @@ def list_episodes(db: Session, feed_id: int | None, limit: int) -> list[models.E
     statement = statement.limit(limit)
     return list(db.scalars(statement))
 
+
+def get_episode(db: Session, episode_id: int) -> models.Episode | None:
+    return db.get(models.Episode, episode_id)
+

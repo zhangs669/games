@@ -265,20 +265,46 @@
             <div class="modal-overlay"></div>
             <div class="modal-content reader-content">
                 <div class="modal-header">
-                    <h2 id="reader-title" class="modal-title"></h2>
+                    <div class="reader-header-content">
+                        <h2 id="reader-title" class="modal-title"></h2>
+                        <div class="reader-header-meta">
+                            <span class="reader-source"></span>
+                            <span class="reader-date"></span>
+                            <span class="reader-reading-time"></span>
+                            <a id="reader-original-link" class="reader-original-link" target="_blank" rel="noreferrer">查看原文</a>
+                        </div>
+                    </div>
                     <button class="modal-close" aria-label="关闭阅读器">&times;</button>
                 </div>
-                <div class="modal-body">
-                    <div class="reader-meta">
-                        <span class="reader-source"></span>
-                        <span class="reader-date"></span>
+                <div class="reader-controls">
+                    <div class="reader-control-group">
+                        <label>字体大小</label>
+                        <button class="reader-control-btn" id="reader-font-decrease" aria-label="减小字体">A-</button>
+                        <span class="reader-control-value" id="reader-font-size-display">16px</span>
+                        <button class="reader-control-btn" id="reader-font-increase" aria-label="增大字体">A+</button>
                     </div>
+                    <div class="reader-control-group">
+                        <label>主题</label>
+                        <button class="reader-control-btn" id="reader-theme-light" aria-label="亮色主题" data-theme="light">☀</button>
+                        <button class="reader-control-btn active" id="reader-theme-dark" aria-label="暗色主题" data-theme="dark">🌙</button>
+                        <button class="reader-control-btn" id="reader-theme-sepia" aria-label="护眼主题" data-theme="sepia">📄</button>
+                    </div>
+                    <div class="reader-control-group">
+                        <label>字体</label>
+                        <button class="reader-control-btn active" id="reader-font-serif" aria-label="衬线体" data-font="serif">Serif</button>
+                        <button class="reader-control-btn" id="reader-font-sans" aria-label="非衬线体" data-font="sans">Sans</button>
+                    </div>
+                    <div class="reader-control-group">
+                        <label>行宽</label>
+                        <button class="reader-control-btn" id="reader-width-narrow" aria-label="窄" data-width="narrow">窄</button>
+                        <button class="reader-control-btn active" id="reader-width-medium" aria-label="中" data-width="medium">中</button>
+                        <button class="reader-control-btn" id="reader-width-wide" aria-label="宽" data-width="wide">宽</button>
+                    </div>
+                </div>
+                <div class="modal-body">
                     <div id="reader-article" class="reader-article">
                         <div class="reader-loading">正在加载文章内容...</div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <a id="reader-original-link" class="btn ghost" target="_blank" rel="noreferrer">查看原文</a>
                 </div>
             </div>
         </div>

@@ -454,26 +454,112 @@ const readerModal = document.querySelector("#reader-modal");
 const readerTitle = document.querySelector("#reader-title");
 const readerSource = document.querySelector(".reader-source");
 const readerDate = document.querySelector(".reader-date");
+const readerReadingTime = document.querySelector(".reader-reading-time");
 const readerArticle = document.querySelector("#reader-article");
 const readerOriginalLink = document.querySelector("#reader-original-link");
 const readerCloseBtn = readerModal?.querySelector(".modal-close");
 const readerOverlay = readerModal?.querySelector(".modal-overlay");
 
+// 阅读器设置（存储在 localStorage）
+let readerSettings = {
+    fontSize: 16,
+    theme: "dark",
+    fontFamily: "serif",
+    width: "medium"
+};
+
+// 从 localStorage 加载设置
+const loadReaderSettings = () => {
+    const saved = localStorage.getItem("readerSettings");
+    if (saved) {
+        try {
+            readerSettings = { ...readerSettings, ...JSON.parse(saved) };
+        } catch (e) {
+            console.warn("无法加载阅读器设置:", e);
+        }
+    }
+};
+
+// 保存设置到 localStorage
+const saveReaderSettings = () => {
+    localStorage.setItem("readerSettings", JSON.stringify(readerSettings));
+};
+
+// 应用阅读器设置
+const applyReaderSettings = () => {
+    const article = readerArticle;
+    if (!article) return;
+    
+    // 字体大小
+    article.style.fontSize = `${readerSettings.fontSize}px`;
+    const fontSizeDisplay = document.querySelector("#reader-font-size-display");
+    if (fontSizeDisplay) {
+        fontSizeDisplay.textContent = `${readerSettings.fontSize}px`;
+    }
+    
+    // 主题 - 移除所有主题类，然后添加当前主题
+    if (readerModal) {
+        readerModal.className = readerModal.className.replace(/reader-theme-\w+/g, "");
+        readerModal.classList.add(`reader-theme-${readerSettings.theme}`);
+    }
+    document.querySelectorAll(".reader-control-btn[data-theme]").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.theme === readerSettings.theme);
+    });
+    
+    // 字体 - 移除所有字体类，然后添加当前字体
+    article.className = article.className.replace(/reader-font-\w+/g, "");
+    article.classList.add(`reader-font-${readerSettings.fontFamily}`);
+    document.querySelectorAll(".reader-control-btn[data-font]").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.font === readerSettings.fontFamily);
+    });
+    
+    // 行宽 - 移除所有行宽类，然后添加当前行宽
+    article.className = article.className.replace(/reader-width-\w+/g, "");
+    article.classList.add(`reader-width-${readerSettings.width}`);
+    document.querySelectorAll(".reader-control-btn[data-width]").forEach(btn => {
+        btn.classList.toggle("active", btn.dataset.width === readerSettings.width);
+    });
+};
+
+// 计算阅读时间（基于中文字符数，假设每分钟阅读300字）
+const calculateReadingTime = (text) => {
+    if (!text) return 0;
+    // 移除HTML标签
+    const plainText = text.replace(/<[^>]*>/g, "");
+    // 计算中文字符数（包括标点）
+    const chineseChars = (plainText.match(/[\u4e00-\u9fa5]/g) || []).length;
+    // 计算英文单词数
+    const englishWords = (plainText.match(/[a-zA-Z]+/g) || []).length;
+    // 估算：中文字符按1字计算，英文单词按0.5字计算
+    const totalWords = chineseChars + englishWords * 0.5;
+    // 每分钟300字
+    const minutes = Math.ceil(totalWords / 300);
+    return minutes;
+};
+
 const openReader = async (episode) => {
     if (!readerModal) return;
     
+    // 加载并应用设置
+    loadReaderSettings();
+    
     // 设置基本信息
     readerTitle.textContent = episode.title || "未命名文章";
-    readerSource.textContent = `来源：${getFeedDisplayName(episode.feed_id)}`;
+    const sourceName = getFeedDisplayName(episode.feed_id);
+    readerSource.textContent = `来源：${sourceName}`;
     readerDate.textContent = episode.published 
         ? new Date(episode.published).toLocaleString() 
         : "";
     readerOriginalLink.href = episode.link || getFeedHomepage(episode.feed_id) || "#";
+    readerReadingTime.textContent = ""; // 稍后更新
     
     // 显示模态框
     readerModal.classList.add("open");
     readerModal.setAttribute("aria-hidden", "false");
     document.body.style.overflow = "hidden";
+    
+    // 应用阅读器设置
+    applyReaderSettings();
     
     // 显示加载状态
     readerArticle.innerHTML = '<div class="reader-loading">正在加载文章内容...</div>';
@@ -482,56 +568,60 @@ const openReader = async (episode) => {
     try {
         let content = "";
         
-        // 优先使用摘要（RSS feed中通常包含完整内容）
-        if (episode.summary) {
-            content = episode.summary;
-        }
-        
-        // 如果有链接且摘要为空，尝试从原文提取（可能因CORS失败）
-        if (!content && episode.link) {
+        // 优先从后端API获取全文
+        if (episode.id) {
             try {
-                const response = await fetch(episode.link, {
-                    mode: "cors",
-                    headers: {
-                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-                    }
-                });
-                if (response.ok) {
-                    const html = await response.text();
-                    const doc = new DOMParser().parseFromString(html, "text/html");
-                    
-                    // 使用Readability提取正文
-                    if (window.Readability) {
-                        try {
-                            const reader = new Readability(doc);
-                            const article = reader.parse();
-                            if (article && article.content) {
-                                content = article.content;
-                            } else if (article && article.textContent) {
-                                content = `<p>${article.textContent.replace(/\n\n+/g, '</p><p>')}</p>`;
-                            }
-                        } catch (readabilityError) {
-                            console.warn("Readability解析失败:", readabilityError);
-                        }
-                    }
+                const response = await request(`/episodes/${episode.id}/full-content`);
+                if (response && response.content) {
+                    content = response.content;
                 }
             } catch (error) {
-                // CORS或其他错误，静默失败，使用摘要或显示提示
-                console.warn("无法从原文提取内容:", error);
+                console.warn("无法从API获取全文:", error);
             }
+        }
+        
+        // 如果API失败，回退到摘要
+        if (!content && episode.summary) {
+            content = episode.summary;
         }
         
         // 渲染内容
         if (content) {
             if (markedAvailable && domPurifyAvailable) {
                 const html = window.marked.parse(content);
-                readerArticle.innerHTML = window.DOMPurify.sanitize(html);
+                const sanitized = window.DOMPurify.sanitize(html);
+                readerArticle.innerHTML = sanitized;
+                
+                // 处理图片：将相对路径转换为绝对路径
+                const images = readerArticle.querySelectorAll("img");
+                images.forEach(img => {
+                    if (img.src && !img.src.startsWith("http")) {
+                        // 如果是相对路径，尝试基于原文链接解析
+                        if (episode.link) {
+                            try {
+                                const baseUrl = new URL(episode.link);
+                                img.src = new URL(img.src, baseUrl).href;
+                            } catch (e) {
+                                // 如果解析失败，保持原样
+                            }
+                        }
+                    }
+                });
             } else {
                 readerArticle.textContent = content;
+            }
+            
+            // 计算并显示阅读时间
+            const readingTime = calculateReadingTime(content);
+            if (readingTime > 0) {
+                readerReadingTime.textContent = `约 ${readingTime} 分钟阅读`;
             }
         } else {
             readerArticle.innerHTML = '<p class="empty">暂无内容，请点击"查看原文"查看完整文章</p>';
         }
+        
+        // 重新应用设置（因为innerHTML会重置样式）
+        applyReaderSettings();
     } catch (error) {
         console.error("加载文章失败:", error);
         readerArticle.innerHTML = '<p class="empty">加载失败，请尝试查看原文</p>';
@@ -551,6 +641,59 @@ if (readerCloseBtn) {
 if (readerOverlay) {
     readerOverlay.addEventListener("click", closeReader);
 }
+
+// 阅读器控制栏事件监听
+const initReaderControls = () => {
+    // 字体大小控制
+    const fontDecrease = document.querySelector("#reader-font-decrease");
+    const fontIncrease = document.querySelector("#reader-font-increase");
+    
+    if (fontDecrease) {
+        fontDecrease.addEventListener("click", () => {
+            readerSettings.fontSize = Math.max(12, readerSettings.fontSize - 2);
+            saveReaderSettings();
+            applyReaderSettings();
+        });
+    }
+    
+    if (fontIncrease) {
+        fontIncrease.addEventListener("click", () => {
+            readerSettings.fontSize = Math.min(24, readerSettings.fontSize + 2);
+            saveReaderSettings();
+            applyReaderSettings();
+        });
+    }
+    
+    // 主题切换
+    document.querySelectorAll(".reader-control-btn[data-theme]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            readerSettings.theme = btn.dataset.theme;
+            saveReaderSettings();
+            applyReaderSettings();
+        });
+    });
+    
+    // 字体切换
+    document.querySelectorAll(".reader-control-btn[data-font]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            readerSettings.fontFamily = btn.dataset.font;
+            saveReaderSettings();
+            applyReaderSettings();
+        });
+    });
+    
+    // 行宽切换
+    document.querySelectorAll(".reader-control-btn[data-width]").forEach(btn => {
+        btn.addEventListener("click", () => {
+            readerSettings.width = btn.dataset.width;
+            saveReaderSettings();
+            applyReaderSettings();
+        });
+    });
+};
+
+// 初始化控制栏
+initReaderControls();
 
 // 音频播放器功能
 const playerModal = document.querySelector("#player-modal");
