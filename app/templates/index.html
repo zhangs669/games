@@ -70,30 +70,43 @@
             <div class="app-layout">
                 <aside class="sidebar">
                     <nav class="sidebar-nav" role="navigation" aria-label="主导航">
-                        <a class="sidebar-nav-item" href="#add-panel">
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M10 3v14M3 10h14"/>
-                            </svg>
-                            <span>订阅表单</span>
-                        </a>
-                        <a class="sidebar-nav-item" href="#dashboard-panel" data-nav-target="feeds">
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M3 3h14v14H3zM7 7h6M7 11h6M7 15h4"/>
-                            </svg>
-                            <span>我的订阅</span>
-                        </a>
-                        <a class="sidebar-nav-item" href="#dashboard-panel" data-nav-target="episodes">
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M3 5h14M3 10h14M3 15h14"/>
-                            </svg>
-                            <span>最新节目</span>
-                        </a>
-                        <a class="sidebar-nav-item" href="/docs" target="_blank" rel="noreferrer">
-                            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M10 2v16M2 10h16"/>
-                            </svg>
-                            <span>API 文档</span>
-                        </a>
+                        <div class="sidebar-nav-group">
+                            <h3 class="sidebar-nav-group__title">主要内容</h3>
+                            <div class="sidebar-nav-group__items">
+                                <a class="sidebar-nav-item" href="#add-panel">
+                                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M10 3v14M3 10h14"/>
+                                    </svg>
+                                    <span>订阅表单</span>
+                                </a>
+                                <a class="sidebar-nav-item" href="#dashboard-panel" data-nav-target="feeds" id="sidebar-feeds">
+                                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 3h14v14H3zM7 7h6M7 11h6M7 15h4"/>
+                                    </svg>
+                                    <span>我的订阅</span>
+                                    <span class="sidebar-nav-badge" id="sidebar-feeds-badge" aria-label="订阅数量">0</span>
+                                </a>
+                                <a class="sidebar-nav-item" href="#dashboard-panel" data-nav-target="episodes" id="sidebar-episodes">
+                                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M3 5h14M3 10h14M3 15h14"/>
+                                    </svg>
+                                    <span>最新节目</span>
+                                    <span class="sidebar-nav-badge" id="sidebar-episodes-badge" aria-label="节目数量">0</span>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="sidebar-nav-divider"></div>
+                        <div class="sidebar-nav-group">
+                            <h3 class="sidebar-nav-group__title">工具与设置</h3>
+                            <div class="sidebar-nav-group__items">
+                                <a class="sidebar-nav-item" href="/docs" target="_blank" rel="noreferrer">
+                                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <path d="M10 2v16M2 10h16"/>
+                                    </svg>
+                                    <span>API 文档</span>
+                                </a>
+                            </div>
+                        </div>
                     </nav>
                 </aside>
                 <main class="content">
@@ -247,8 +260,76 @@
 
         <div id="toast" role="status" aria-live="assertive"></div>
 
+        <!-- 阅读器视图模态框 -->
+        <div id="reader-modal" class="modal" role="dialog" aria-labelledby="reader-title" aria-hidden="true">
+            <div class="modal-overlay"></div>
+            <div class="modal-content reader-content">
+                <div class="modal-header">
+                    <h2 id="reader-title" class="modal-title"></h2>
+                    <button class="modal-close" aria-label="关闭阅读器">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="reader-meta">
+                        <span class="reader-source"></span>
+                        <span class="reader-date"></span>
+                    </div>
+                    <div id="reader-article" class="reader-article">
+                        <div class="reader-loading">正在加载文章内容...</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a id="reader-original-link" class="btn ghost" target="_blank" rel="noreferrer">查看原文</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- 音频播放器模态框 -->
+        <div id="player-modal" class="modal" role="dialog" aria-labelledby="player-title" aria-hidden="true">
+            <div class="modal-overlay"></div>
+            <div class="modal-content player-content">
+                <div class="modal-header">
+                    <h2 id="player-title" class="modal-title"></h2>
+                    <button class="modal-close" aria-label="关闭播放器">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="player-meta">
+                        <span class="player-source"></span>
+                        <span class="player-duration"></span>
+                    </div>
+                    <div class="player-controls">
+                        <audio id="audio-player" preload="metadata"></audio>
+                        <div class="player-main-controls">
+                            <button id="play-pause-btn" class="btn-icon player-play-pause" aria-label="播放/暂停">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M8 5v14l11-7z"/>
+                                </svg>
+                            </button>
+                            <div class="player-time-info">
+                                <span id="current-time">0:00</span>
+                                <span>/</span>
+                                <span id="total-time">0:00</span>
+                            </div>
+                        </div>
+                        <div class="player-progress-container">
+                            <input type="range" id="progress-bar" class="player-progress" min="0" max="100" value="0" step="0.1" aria-label="播放进度">
+                        </div>
+                        <div class="player-volume-controls">
+                            <button id="mute-btn" class="btn-icon player-volume-btn" aria-label="静音/取消静音">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>
+                                </svg>
+                            </button>
+                            <input type="range" id="volume-bar" class="player-volume" min="0" max="100" value="100" step="1" aria-label="音量">
+                        </div>
+                    </div>
+                    <div id="player-description" class="player-description"></div>
+                </div>
+            </div>
+        </div>
+
         <script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.8/dist/purify.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@mozilla/readability@0.4.4/Readability.js"></script>
         <script src="/static/app.js" type="module"></script>
     </body>
 </html>

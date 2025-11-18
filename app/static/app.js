@@ -37,6 +37,8 @@ const themeToggleBtn = document.querySelector("#toggle-theme");
 const dashboardTabs = document.querySelectorAll("[data-tab-target]");
 const tabContents = document.querySelectorAll("[data-tab-content]");
 const sidebarNavItems = document.querySelectorAll(".sidebar-nav-item");
+const sidebarFeedsBadge = document.querySelector("#sidebar-feeds-badge");
+const sidebarEpisodesBadge = document.querySelector("#sidebar-episodes-badge");
 
 const THEME_STORAGE_KEY = "rss_studio_theme";
 const COLLAPSE_CHAR_THRESHOLD = 180;
@@ -53,7 +55,7 @@ const getFeedDisplayName = (feedId) => {
     return feed?.title || feed?.url || "未知来源";
 };
 
-const attachDescriptionToggle = (card) => {
+const attachDescriptionToggle = (card, episode) => {
     if (!card) return;
     const desc = card.querySelector(".card-desc");
     if (!desc) return;
@@ -66,10 +68,16 @@ const attachDescriptionToggle = (card) => {
     toggle.className = "card-toggle";
     toggle.textContent = "展开";
     toggle.setAttribute("aria-expanded", "false");
-    toggle.addEventListener("click", () => {
-        const expanded = desc.classList.toggle("card-desc--expanded");
-        toggle.textContent = expanded ? "收起" : "展开";
-        toggle.setAttribute("aria-expanded", String(expanded));
+    toggle.addEventListener("click", (e) => {
+        e.stopPropagation(); // 阻止事件冒泡，避免触发卡片的点击事件
+        // 如果有episode数据，直接打开阅读器界面；否则保持原来的展开/收起行为
+        if (episode) {
+            openReader(episode);
+        } else {
+            const expanded = desc.classList.toggle("card-desc--expanded");
+            toggle.textContent = expanded ? "收起" : "展开";
+            toggle.setAttribute("aria-expanded", String(expanded));
+        }
     });
     desc.insertAdjacentElement("afterend", toggle);
 };
@@ -128,11 +136,38 @@ const request = async (path, options = {}) => {
     return res.status === 204 ? null : res.json();
 };
 
+const updateSidebarBadge = (badgeElement, count) => {
+    if (!badgeElement) return;
+    const currentCount = parseInt(badgeElement.textContent) || 0;
+    
+    // 如果数量为0，隐藏徽章
+    if (count === 0) {
+        badgeElement.style.display = "none";
+        badgeElement.textContent = "0";
+        return;
+    }
+    
+    // 显示徽章并更新数量
+    badgeElement.style.display = "inline-flex";
+    badgeElement.textContent = count;
+    
+    // 添加动画效果（仅在数量变化时）
+    if (count !== currentCount && currentCount > 0) {
+        badgeElement.style.animation = "none";
+        // 强制重排以触发动画
+        void badgeElement.offsetWidth;
+        badgeElement.style.animation = "badge-pulse 0.4s ease";
+    }
+};
+
 const renderFeeds = (feeds) => {
     feedList.innerHTML = "";
     const formattedCount = feeds.length.toString().padStart(2, "0");
     heroCount.textContent = formattedCount;
     if (topbarFeedCount) topbarFeedCount.textContent = formattedCount;
+    
+    // 更新侧边栏徽章
+    updateSidebarBadge(sidebarFeedsBadge, feeds.length);
 
     filterSelect.innerHTML = `<option value="">全部订阅</option>`;
     currentFeeds = feeds;
@@ -145,7 +180,7 @@ const renderFeeds = (feeds) => {
 
     if (!feeds.length) {
         feedList.innerHTML =
-            '<p class="empty">暂无订阅，点击“订阅新源”开启旅程。</p>';
+            '<p class="empty">暂无订阅，点击"订阅新源"开启旅程。</p>';
         return;
     }
 
@@ -203,6 +238,9 @@ const renderEpisodes = (episodes) => {
     episodeList.innerHTML = "";
     const formattedCount = episodes.length.toString().padStart(2, "0");
     if (topbarEpisodeCount) topbarEpisodeCount.textContent = formattedCount;
+    
+    // 更新侧边栏徽章
+    updateSidebarBadge(sidebarEpisodesBadge, episodes.length);
 
     if (!episodes.length) {
         episodeList.innerHTML = '<p class="empty">暂无节目内容。</p>';
@@ -224,7 +262,7 @@ const renderEpisodes = (episodes) => {
             episode.summary || episode.description,
             "暂无简介"
         );
-        attachDescriptionToggle(card);
+        attachDescriptionToggle(card, episode);
         const publishedDate = episode.published
             ? new Date(episode.published)
             : new Date();
@@ -234,6 +272,22 @@ const renderEpisodes = (episodes) => {
         link.href = episode.link || getFeedHomepage(episode.feed_id) || "#";
         link.textContent = "打开原文";
         link.title = "在新标签打开原网页";
+        
+        // 添加点击事件：根据是否有audio_url判断是播客还是RSS
+        card.style.cursor = "pointer";
+        card.addEventListener("click", (e) => {
+            // 如果点击的是链接按钮，不处理
+            if (e.target.closest("a")) return;
+            
+            if (episode.audio_url) {
+                // 播客：打开播放器
+                openPlayer(episode);
+            } else {
+                // RSS：打开阅读器
+                openReader(episode);
+            }
+        });
+        
         episodeList.appendChild(clone);
     });
 };
@@ -394,6 +448,308 @@ const initSidebarNav = () => {
         });
     });
 };
+
+// 阅读器功能
+const readerModal = document.querySelector("#reader-modal");
+const readerTitle = document.querySelector("#reader-title");
+const readerSource = document.querySelector(".reader-source");
+const readerDate = document.querySelector(".reader-date");
+const readerArticle = document.querySelector("#reader-article");
+const readerOriginalLink = document.querySelector("#reader-original-link");
+const readerCloseBtn = readerModal?.querySelector(".modal-close");
+const readerOverlay = readerModal?.querySelector(".modal-overlay");
+
+const openReader = async (episode) => {
+    if (!readerModal) return;
+    
+    // 设置基本信息
+    readerTitle.textContent = episode.title || "未命名文章";
+    readerSource.textContent = `来源：${getFeedDisplayName(episode.feed_id)}`;
+    readerDate.textContent = episode.published 
+        ? new Date(episode.published).toLocaleString() 
+        : "";
+    readerOriginalLink.href = episode.link || getFeedHomepage(episode.feed_id) || "#";
+    
+    // 显示模态框
+    readerModal.classList.add("open");
+    readerModal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    
+    // 显示加载状态
+    readerArticle.innerHTML = '<div class="reader-loading">正在加载文章内容...</div>';
+    
+    // 渲染文章内容
+    try {
+        let content = "";
+        
+        // 优先使用摘要（RSS feed中通常包含完整内容）
+        if (episode.summary) {
+            content = episode.summary;
+        }
+        
+        // 如果有链接且摘要为空，尝试从原文提取（可能因CORS失败）
+        if (!content && episode.link) {
+            try {
+                const response = await fetch(episode.link, {
+                    mode: "cors",
+                    headers: {
+                        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                    }
+                });
+                if (response.ok) {
+                    const html = await response.text();
+                    const doc = new DOMParser().parseFromString(html, "text/html");
+                    
+                    // 使用Readability提取正文
+                    if (window.Readability) {
+                        try {
+                            const reader = new Readability(doc);
+                            const article = reader.parse();
+                            if (article && article.content) {
+                                content = article.content;
+                            } else if (article && article.textContent) {
+                                content = `<p>${article.textContent.replace(/\n\n+/g, '</p><p>')}</p>`;
+                            }
+                        } catch (readabilityError) {
+                            console.warn("Readability解析失败:", readabilityError);
+                        }
+                    }
+                }
+            } catch (error) {
+                // CORS或其他错误，静默失败，使用摘要或显示提示
+                console.warn("无法从原文提取内容:", error);
+            }
+        }
+        
+        // 渲染内容
+        if (content) {
+            if (markedAvailable && domPurifyAvailable) {
+                const html = window.marked.parse(content);
+                readerArticle.innerHTML = window.DOMPurify.sanitize(html);
+            } else {
+                readerArticle.textContent = content;
+            }
+        } else {
+            readerArticle.innerHTML = '<p class="empty">暂无内容，请点击"查看原文"查看完整文章</p>';
+        }
+    } catch (error) {
+        console.error("加载文章失败:", error);
+        readerArticle.innerHTML = '<p class="empty">加载失败，请尝试查看原文</p>';
+    }
+};
+
+const closeReader = () => {
+    if (!readerModal) return;
+    readerModal.classList.remove("open");
+    readerModal.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+};
+
+if (readerCloseBtn) {
+    readerCloseBtn.addEventListener("click", closeReader);
+}
+if (readerOverlay) {
+    readerOverlay.addEventListener("click", closeReader);
+}
+
+// 音频播放器功能
+const playerModal = document.querySelector("#player-modal");
+const playerTitle = document.querySelector("#player-title");
+const playerSource = document.querySelector(".player-source");
+const playerDuration = document.querySelector(".player-duration");
+const playerDescription = document.querySelector("#player-description");
+const audioPlayer = document.querySelector("#audio-player");
+const playPauseBtn = document.querySelector("#play-pause-btn");
+const progressBar = document.querySelector("#progress-bar");
+const volumeBar = document.querySelector("#volume-bar");
+const muteBtn = document.querySelector("#mute-btn");
+const currentTimeEl = document.querySelector("#current-time");
+const totalTimeEl = document.querySelector("#total-time");
+const playerCloseBtn = playerModal?.querySelector(".modal-close");
+const playerOverlay = playerModal?.querySelector(".modal-overlay");
+
+let currentEpisode = null;
+
+const formatTime = (seconds) => {
+    if (!isFinite(seconds) || isNaN(seconds)) return "0:00";
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
+};
+
+const updatePlayPauseIcon = (isPlaying) => {
+    if (!playPauseBtn) return;
+    const svg = playPauseBtn.querySelector("svg");
+    if (!svg) return;
+    
+    if (isPlaying) {
+        // 暂停图标
+        svg.innerHTML = '<path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>';
+    } else {
+        // 播放图标
+        svg.innerHTML = '<path d="M8 5v14l11-7z"/>';
+    }
+};
+
+const updateVolumeIcon = (isMuted, volume) => {
+    if (!muteBtn) return;
+    const svg = muteBtn.querySelector("svg");
+    if (!svg) return;
+    
+    if (isMuted || volume === 0) {
+        // 静音图标
+        svg.innerHTML = '<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>';
+    } else if (volume < 0.5) {
+        // 低音量图标
+        svg.innerHTML = '<path d="M18.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM5 9v6h4l5 5V4L9 9H5z"/>';
+    } else {
+        // 正常音量图标
+        svg.innerHTML = '<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
+    }
+};
+
+const openPlayer = (episode) => {
+    if (!playerModal || !audioPlayer) return;
+    
+    currentEpisode = episode;
+    
+    // 设置基本信息
+    playerTitle.textContent = episode.title || "未命名播客";
+    playerSource.textContent = `来源：${getFeedDisplayName(episode.feed_id)}`;
+    playerDuration.textContent = episode.duration ? `时长：${episode.duration}` : "";
+    
+    // 设置描述
+    if (episode.summary) {
+        renderMarkdown(playerDescription, episode.summary, "");
+    } else {
+        playerDescription.innerHTML = "";
+    }
+    
+    // 设置音频源
+    audioPlayer.src = episode.audio_url;
+    audioPlayer.load();
+    
+    // 重置UI
+    progressBar.value = 0;
+    currentTimeEl.textContent = "0:00";
+    totalTimeEl.textContent = "0:00";
+    updatePlayPauseIcon(false);
+    
+    // 显示模态框
+    playerModal.classList.add("open");
+    playerModal.setAttribute("aria-hidden", "false");
+    document.body.style.overflow = "hidden";
+    
+    // 加载元数据后更新总时长
+    audioPlayer.addEventListener("loadedmetadata", () => {
+        totalTimeEl.textContent = formatTime(audioPlayer.duration);
+    }, { once: true });
+};
+
+const closePlayer = () => {
+    if (!playerModal || !audioPlayer) return;
+    
+    // 停止播放
+    audioPlayer.pause();
+    audioPlayer.src = "";
+    currentEpisode = null;
+    
+    // 关闭模态框
+    playerModal.classList.remove("open");
+    playerModal.setAttribute("aria-hidden", "true");
+    document.body.style.overflow = "";
+};
+
+// 播放/暂停控制
+if (playPauseBtn && audioPlayer) {
+    playPauseBtn.addEventListener("click", () => {
+        if (audioPlayer.paused) {
+            audioPlayer.play();
+            updatePlayPauseIcon(true);
+        } else {
+            audioPlayer.pause();
+            updatePlayPauseIcon(false);
+        }
+    });
+    
+    audioPlayer.addEventListener("play", () => updatePlayPauseIcon(true));
+    audioPlayer.addEventListener("pause", () => updatePlayPauseIcon(false));
+}
+
+// 进度条控制
+if (progressBar && audioPlayer) {
+    let isDragging = false;
+    
+    // 拖动进度条
+    progressBar.addEventListener("mousedown", () => {
+        isDragging = true;
+    });
+    progressBar.addEventListener("mouseup", () => {
+        isDragging = false;
+    });
+    progressBar.addEventListener("input", (e) => {
+        if (audioPlayer.duration) {
+            const time = (e.target.value / 100) * audioPlayer.duration;
+            audioPlayer.currentTime = time;
+        }
+    });
+    
+    // 更新进度条时，如果正在拖动则不更新
+    audioPlayer.addEventListener("timeupdate", () => {
+        if (!isDragging && audioPlayer.duration) {
+            const progress = (audioPlayer.currentTime / audioPlayer.duration) * 100;
+            progressBar.value = progress;
+            currentTimeEl.textContent = formatTime(audioPlayer.currentTime);
+        }
+    });
+}
+
+// 音量控制
+if (volumeBar && audioPlayer && muteBtn) {
+    // 设置初始音量
+    audioPlayer.volume = volumeBar.value / 100;
+    
+    // 音量滑块
+    volumeBar.addEventListener("input", (e) => {
+        const volume = e.target.value / 100;
+        audioPlayer.volume = volume;
+        audioPlayer.muted = false;
+        updateVolumeIcon(false, volume);
+    });
+    
+    // 静音按钮
+    muteBtn.addEventListener("click", () => {
+        audioPlayer.muted = !audioPlayer.muted;
+        updateVolumeIcon(audioPlayer.muted, audioPlayer.volume);
+    });
+    
+    // 更新音量图标
+    audioPlayer.addEventListener("volumechange", () => {
+        updateVolumeIcon(audioPlayer.muted, audioPlayer.volume);
+        if (!audioPlayer.muted) {
+            volumeBar.value = audioPlayer.volume * 100;
+        }
+    });
+}
+
+if (playerCloseBtn) {
+    playerCloseBtn.addEventListener("click", closePlayer);
+}
+if (playerOverlay) {
+    playerOverlay.addEventListener("click", closePlayer);
+}
+
+// ESC键关闭模态框
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+        if (readerModal?.classList.contains("open")) {
+            closeReader();
+        }
+        if (playerModal?.classList.contains("open")) {
+            closePlayer();
+        }
+    }
+});
 
 initThemeControls();
 initDashboardTabs();
