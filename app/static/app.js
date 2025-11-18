@@ -29,8 +29,6 @@ const filterSelect = document.querySelector("#episode-filter");
 const heroCount = document.querySelector("#hero-feed-count");
 const topbarFeedCount = document.querySelector("#topbar-feed-count");
 const topbarEpisodeCount = document.querySelector("#topbar-episode-count");
-const sidebarFeedCount = document.querySelector("#sidebar-feed-count");
-const sidebarEpisodeCount = document.querySelector("#sidebar-episode-count");
 const addPanel = document.querySelector("#add-panel");
 const addPanelTriggers = document.querySelectorAll("[data-action='open-add-panel']");
 const refreshAllButtons = document.querySelectorAll("[data-action='refresh-feeds']");
@@ -38,6 +36,7 @@ const closeAddPanelBtn = document.querySelector("#close-add-panel");
 const themeToggleBtn = document.querySelector("#toggle-theme");
 const dashboardTabs = document.querySelectorAll("[data-tab-target]");
 const tabContents = document.querySelectorAll("[data-tab-content]");
+const sidebarNavItems = document.querySelectorAll(".sidebar-nav-item");
 
 const THEME_STORAGE_KEY = "rss_studio_theme";
 const COLLAPSE_CHAR_THRESHOLD = 180;
@@ -134,7 +133,6 @@ const renderFeeds = (feeds) => {
     const formattedCount = feeds.length.toString().padStart(2, "0");
     heroCount.textContent = formattedCount;
     if (topbarFeedCount) topbarFeedCount.textContent = formattedCount;
-    if (sidebarFeedCount) sidebarFeedCount.textContent = formattedCount;
 
     filterSelect.innerHTML = `<option value="">全部订阅</option>`;
     currentFeeds = feeds;
@@ -205,7 +203,6 @@ const renderEpisodes = (episodes) => {
     episodeList.innerHTML = "";
     const formattedCount = episodes.length.toString().padStart(2, "0");
     if (topbarEpisodeCount) topbarEpisodeCount.textContent = formattedCount;
-    if (sidebarEpisodeCount) sidebarEpisodeCount.textContent = formattedCount;
 
     if (!episodes.length) {
         episodeList.innerHTML = '<p class="empty">暂无节目内容。</p>';
@@ -362,8 +359,45 @@ const init = async () => {
     await loadEpisodes();
 };
 
+const initSidebarNav = () => {
+    sidebarNavItems.forEach((item) => {
+        item.addEventListener("click", (e) => {
+            const href = item.getAttribute("href");
+            const navTarget = item.getAttribute("data-nav-target");
+            
+            if (href && href.startsWith("#")) {
+                e.preventDefault();
+                const targetId = href.substring(1);
+                const targetElement = document.getElementById(targetId);
+                
+                if (targetElement) {
+                    // 如果是订阅表单面板
+                    if (targetId === "add-panel") {
+                        addPanel.classList.add("open");
+                        targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+                    } 
+                    // 如果是仪表盘面板，需要切换标签页
+                    else if (targetId === "dashboard-panel" && navTarget) {
+                        activateDashboardTab(navTarget);
+                        targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+                    } 
+                    // 其他情况直接滚动
+                    else {
+                        targetElement.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }
+                    
+                    // 更新活动状态
+                    sidebarNavItems.forEach((navItem) => navItem.classList.remove("active"));
+                    item.classList.add("active");
+                }
+            }
+        });
+    });
+};
+
 initThemeControls();
 initDashboardTabs();
+initSidebarNav();
 init();
 
 
